@@ -517,7 +517,6 @@
         const groupControls = document.getElementById('groupControls');
         const searchInput = document.getElementById('searchInput');
 
-        // Функции
         function showRegister() {
             loginForm.style.display = 'none';
             registerForm.style.display = 'block';
@@ -549,98 +548,49 @@
                 return;
             }
 
-            if (!email.includes('@')) {
-                document.getElementById('regError').textContent = 'Введите корректный email';
-                return;
-            }
-
-            // Блокируем кнопку
             registerBtn.classList.add('loading');
             registerBtn.textContent = 'Регистрация...';
 
             try {
-                // Проверяем существование пользователя с таким nickname
-                const { data: existingUser } = await sbClient
-                    .from('users')
-                    .select('nickname')
-                    .eq('nickname', nickname)
-                    .maybeSingle();
-
-                if (existingUser) {
-                    document.getElementById('regError').textContent = 'Этот никнейм уже занят';
-                    registerBtn.classList.remove('loading');
-                    registerBtn.textContent = 'Зарегистрироваться';
-                    return;
-                }
-
                 // Регистрация в Supabase Auth
                 const { data: authData, error: authError } = await sbClient.auth.signUp({
                     email: email,
                     password: password,
                     options: {
-                        data: { nickname: nickname },
-                        emailRedirectTo: window.location.origin
+                        data: { nickname: nickname }
                     }
                 });
 
                 if (authError) {
                     if (authError.message.includes('already registered')) {
-                        document.getElementById('regError').textContent = 'Этот email уже зарегистрирован. Попробуйте войти.';
-                    } else if (authError.message.includes('rate limit')) {
-                        document.getElementById('regError').textContent = 'Слишком много попыток. Подождите немного.';
+                        document.getElementById('regError').textContent = 'Этот email уже зарегистрирован';
                     } else {
                         document.getElementById('regError').textContent = authError.message;
                     }
-                    registerBtn.classList.remove('loading');
-                    registerBtn.textContent = 'Зарегистрироваться';
                     return;
                 }
 
                 if (!authData.user) {
                     document.getElementById('regError').textContent = 'Ошибка регистрации';
-                    registerBtn.classList.remove('loading');
-                    registerBtn.textContent = 'Зарегистрироваться';
                     return;
                 }
 
                 // Создаем профиль пользователя
                 const avatarUrl = `https://ui-avatars.com/api/?background=667eea&color=fff&name=${encodeURIComponent(nickname)}`;
 
-                // Пробуем вставить с повторной попыткой
-                let retries = 3;
-                let inserted = false;
+                const { error: userError } = await sbClient
+                    .from('users')
+                    .insert({
+                        id: authData.user.id,
+                        email: email,
+                        nickname: nickname,
+                        avatar_url: avatarUrl,
+                        status: 'online'
+                    });
 
-                while (retries > 0 && !inserted) {
-                    const { error: userError } = await sbClient
-                        .from('users')
-                        .insert([{
-                            id: authData.user.id,
-                            email: email,
-                            nickname: nickname,
-                            avatar_url: avatarUrl,
-                            status: 'online'
-                        }]);
-
-                    if (!userError) {
-                        inserted = true;
-                        break;
-                    }
-
-                    if (userError.code === '23505') {
-                        document.getElementById('regError').textContent = 'Пользователь с таким email или ником уже существует';
-                        break;
-                    }
-
-                    retries--;
-                    if (retries > 0) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                }
-
-                if (!inserted) {
-                    document.getElementById('regError').textContent = 'Ошибка создания профиля. Попробуйте позже.';
-                    registerBtn.classList.remove('loading');
-                    registerBtn.textContent = 'Зарегистрироваться';
+                if (userError) {
+                    console.error('User insert error:', userError);
+                    document.getElementById('regError').textContent = 'Ошибка создания профиля: ' + (userError.message || 'неизвестная ошибка');
                     return;
                 }
 
@@ -656,7 +606,7 @@
 
             } catch (error) {
                 console.error('Registration error:', error);
-                document.getElementById('regError').textContent = 'Ошибка соединения. Попробуйте позже.';
+                document.getElementById('regError').textContent = 'Ошибка: ' + error.message;
             } finally {
                 registerBtn.classList.remove('loading');
                 registerBtn.textContent = 'Зарегистрироваться';
@@ -685,55 +635,22 @@
 
                 if (error) {
                     document.getElementById('loginError').textContent = 'Неверный email или пароль';
-                    loginBtn.classList.remove('loading');
-                    loginBtn.textContent = 'Войти';
                     return;
                 }
 
                 currentUser = data.user;
 
-                // Получаем профиль с повторной попыткой
-                let retries = 3;
-                let userData = null;
+                // Получаем профиль
+                const { data: userData, error: userError } = await sbClient
+                    .from('users')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
 
-                while (retries > 0 && !userData) {
-                    const { data: data2, error: userError } = await sbClient
-                        .from('users')
-                        .select('*')
-                        .eq('id', currentUser.id)
-                        .maybeSingle();
-
-                    if (!userError && data2) {
-                        userData = data2;
-                        break;
-                    }
-
-                    retries--;
-                    if (retries > 0) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                }
-
-                if (!userData) {
-                    // Если профиля нет, создаем его
-                    const avatarUrl = `https://ui-avatars.com/api/?background=667eea&color=fff&name=${encodeURIComponent(currentUser.email.split('@')[0])}`;
-                    await sbClient
-                        .from('users')
-                        .insert([{
-                            id: currentUser.id,
-                            email: currentUser.email,
-                            nickname: currentUser.email.split('@')[0],
-                            avatar_url: avatarUrl,
-                            status: 'online'
-                        }]);
-
-                    const { data: newUserData } = await sbClient
-                        .from('users')
-                        .select('*')
-                        .eq('id', currentUser.id)
-                        .single();
-
-                    userData = newUserData;
+                if (userError) {
+                    console.error('User fetch error:', userError);
+                    document.getElementById('loginError').textContent = 'Профиль не найден';
+                    return;
                 }
 
                 currentUser.profile = userData;
@@ -812,7 +729,7 @@
                                 .from('users')
                                 .select('nickname, avatar_url')
                                 .eq('id', otherUserId)
-                                .maybeSingle();
+                                .single();
 
                             if (otherUser) {
                                 displayName = otherUser.nickname;
@@ -847,11 +764,7 @@
 
             const { data: friends, error } = await sbClient
                 .from('friends')
-                .select(`
-                    *,
-                    friend:friend_id (id, nickname, avatar_url),
-                    user:user_id (id, nickname, avatar_url)
-                `)
+                .select('*')
                 .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
                 .eq('status', 'accepted');
 
@@ -866,19 +779,26 @@
                 friendsListDiv.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">Нет друзей</div>';
             } else {
                 for (const friend of friends) {
-                    const friendData = friend.friend_id === currentUser.id ? friend.user : friend.friend;
+                    const friendId = friend.user_id === currentUser.id ? friend.friend_id : friend.user_id;
+                    const { data: friendData } = await sbClient
+                        .from('users')
+                        .select('id, nickname, avatar_url')
+                        .eq('id', friendId)
+                        .single();
 
-                    const friendElement = document.createElement('div');
-                    friendElement.className = 'chat-item';
-                    friendElement.innerHTML = `
-                        <img class="chat-avatar" src="${friendData.avatar_url || `https://ui-avatars.com/api/?background=667eea&color=fff&name=${encodeURIComponent(friendData.nickname)}`}">
-                        <div class="chat-details">
-                            <div class="chat-name">${escapeHtml(friendData.nickname)}</div>
-                            <div class="chat-last-message">Нажмите для чата</div>
-                        </div>
-                    `;
-                    friendElement.onclick = () => createPrivateChat(friendData.id, friendData.nickname);
-                    friendsListDiv.appendChild(friendElement);
+                    if (friendData) {
+                        const friendElement = document.createElement('div');
+                        friendElement.className = 'chat-item';
+                        friendElement.innerHTML = `
+                            <img class="chat-avatar" src="${friendData.avatar_url || `https://ui-avatars.com/api/?background=667eea&color=fff&name=${encodeURIComponent(friendData.nickname)}`}">
+                            <div class="chat-details">
+                                <div class="chat-name">${escapeHtml(friendData.nickname)}</div>
+                                <div class="chat-last-message">Нажмите для чата</div>
+                            </div>
+                        `;
+                        friendElement.onclick = () => createPrivateChat(friendData.id, friendData.nickname);
+                        friendsListDiv.appendChild(friendElement);
+                    }
                 }
             }
 
@@ -890,36 +810,38 @@
         }
 
         async function createPrivateChat(userId, nickname) {
-            const { data: existingChats, error } = await sbClient
+            // Проверяем существующий чат
+            const { data: existingMemberships } = await sbClient
                 .from('chat_members')
                 .select('chat_id')
                 .eq('user_id', currentUser.id);
 
-            if (existingChats) {
-                for (const member of existingChats) {
+            if (existingMemberships) {
+                for (const membership of existingMemberships) {
                     const { data: members } = await sbClient
                         .from('chat_members')
                         .select('user_id')
-                        .eq('chat_id', member.chat_id);
+                        .eq('chat_id', membership.chat_id);
 
                     if (members && members.length === 2 && members.some(m => m.user_id === userId)) {
-                        selectChat(member.chat_id, nickname, 'private');
+                        selectChat(membership.chat_id, nickname, 'private');
                         return;
                     }
                 }
             }
 
+            // Создаем новый чат
             const { data: chat, error: chatError } = await sbClient
                 .from('chats')
-                .insert([{
+                .insert({
                     type: 'private',
                     created_by: currentUser.id
-                }])
+                })
                 .select()
                 .single();
 
             if (chatError) {
-                alert('Ошибка создания чата');
+                alert('Ошибка создания чата: ' + chatError.message);
                 return;
             }
 
@@ -962,7 +884,7 @@
         async function loadMessages(chatId) {
             const { data: messages, error } = await sbClient
                 .from('messages')
-                .select('*, user:user_id(nickname, avatar_url)')
+                .select('*')
                 .eq('chat_id', chatId)
                 .eq('is_deleted', false)
                 .order('created_at', { ascending: true });
@@ -991,7 +913,7 @@
 
             let content = `<div class="message-content">${escapeHtml(message.content || '')}</div>`;
 
-            if (message.file_url && message.file_url.startsWith('blob:')) {
+            if (message.file_url) {
                 if (message.message_type === 'photo') {
                     content += `<img class="message-media" src="${message.file_url}">`;
                 } else if (message.message_type === 'video') {
@@ -1013,12 +935,12 @@
 
             const { error } = await sbClient
                 .from('messages')
-                .insert([{
+                .insert({
                     chat_id: currentChat.id,
                     user_id: currentUser.id,
                     content: content,
                     message_type: 'text'
-                }]);
+                });
 
             if (error) {
                 alert('Ошибка отправки: ' + error.message);
@@ -1034,16 +956,16 @@
 
             sbClient
                 .from('messages')
-                .insert([{
+                .insert({
                     chat_id: currentChat.id,
                     user_id: currentUser.id,
                     content: `📎 ${file.name}`,
                     message_type: file.type.startsWith('image/') ? 'photo' : 'video',
                     file_url: URL.createObjectURL(file),
                     file_size: file.size
-                }])
+                })
                 .then(({ error }) => {
-                    if (error) alert('Ошибка отправки файла');
+                    if (error) alert('Ошибка отправки файла: ' + error.message);
                 });
 
             fileInput.value = '';
@@ -1055,10 +977,10 @@
             if (confirm('Удалить этот чат?')) {
                 await sbClient
                     .from('deleted_chats')
-                    .insert([{
+                    .insert({
                         user_id: currentUser.id,
                         chat_id: currentChat.id
-                    }]);
+                    });
 
                 currentChat = null;
                 messagesContainer.innerHTML = '<div style="text-align:center;color:#999;margin-top:20px;">Выберите чат чтобы начать общение</div>';
@@ -1098,17 +1020,17 @@
 
             const { data: chat, error: chatError } = await sbClient
                 .from('chats')
-                .insert([{
+                .insert({
                     name: name,
                     type: 'group',
                     created_by: currentUser.id,
                     avatar_url: `https://ui-avatars.com/api/?background=667eea&color=fff&name=${encodeURIComponent(name)}`
-                }])
+                })
                 .select()
                 .single();
 
             if (chatError) {
-                alert('Ошибка создания группы');
+                alert('Ошибка создания группы: ' + chatError.message);
                 return;
             }
 
@@ -1157,8 +1079,7 @@
                         for (const user of users) {
                             await sbClient
                                 .from('chat_members')
-                                .insert([{ chat_id: currentChat.id, user_id: user.id, role: 'member' }])
-                                .select();
+                                .insert({ chat_id: currentChat.id, user_id: user.id, role: 'member' });
                         }
                     }
                 }
@@ -1177,12 +1098,12 @@
                 .from('users')
                 .select('id')
                 .eq('nickname', nickname)
-                .maybeSingle();
+                .single();
 
             if (user) {
                 await sbClient
                     .from('chat_members')
-                    .insert([{ chat_id: currentChat.id, user_id: user.id, role: 'member' }]);
+                    .insert({ chat_id: currentChat.id, user_id: user.id, role: 'member' });
                 alert('Пользователь добавлен');
             } else {
                 alert('Пользователь не найден');
@@ -1197,7 +1118,7 @@
                 .from('users')
                 .select('id')
                 .eq('nickname', nickname)
-                .maybeSingle();
+                .single();
 
             if (!user) {
                 alert('Пользователь не найден');
@@ -1211,11 +1132,11 @@
 
             const { error } = await sbClient
                 .from('friends')
-                .insert([{
+                .insert({
                     user_id: currentUser.id,
                     friend_id: user.id,
                     status: 'accepted'
-                }]);
+                });
 
             if (error) {
                 if (error.code === '23505') {
