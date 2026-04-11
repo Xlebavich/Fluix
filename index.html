@@ -370,6 +370,11 @@
         button {
             font-size: 14px;
         }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -474,7 +479,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Инициализация Supabase - используем другую переменную, не supabase
+        // Инициализация Supabase
         const SUPABASE_URL = 'https://xxqvsnxcudrwoyofjnie.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4cXZzbnhjdWRyd295b2ZqbmllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NDk3MzMsImV4cCI6MjA5MTIyNTczM30.p6ryAFSevRpZKBQ7m0PSw7POPnIaD3TbtPMEcKfIeRI';
         const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -549,44 +554,93 @@
                 return;
             }
 
+            // Блокируем кнопку
+            registerBtn.classList.add('loading');
+            registerBtn.textContent = 'Регистрация...';
+
             try {
+                // Проверяем существование пользователя с таким nickname
+                const { data: existingUser } = await sbClient
+                    .from('users')
+                    .select('nickname')
+                    .eq('nickname', nickname)
+                    .maybeSingle();
+
+                if (existingUser) {
+                    document.getElementById('regError').textContent = 'Этот никнейм уже занят';
+                    registerBtn.classList.remove('loading');
+                    registerBtn.textContent = 'Зарегистрироваться';
+                    return;
+                }
+
+                // Регистрация в Supabase Auth
                 const { data: authData, error: authError } = await sbClient.auth.signUp({
                     email: email,
                     password: password,
                     options: {
-                        data: { nickname: nickname }
+                        data: { nickname: nickname },
+                        emailRedirectTo: window.location.origin
                     }
                 });
 
                 if (authError) {
                     if (authError.message.includes('already registered')) {
-                        document.getElementById('regError').textContent = 'Этот email уже зарегистрирован';
+                        document.getElementById('regError').textContent = 'Этот email уже зарегистрирован. Попробуйте войти.';
+                    } else if (authError.message.includes('rate limit')) {
+                        document.getElementById('regError').textContent = 'Слишком много попыток. Подождите немного.';
                     } else {
                         document.getElementById('regError').textContent = authError.message;
                     }
+                    registerBtn.classList.remove('loading');
+                    registerBtn.textContent = 'Зарегистрироваться';
                     return;
                 }
 
                 if (!authData.user) {
                     document.getElementById('regError').textContent = 'Ошибка регистрации';
+                    registerBtn.classList.remove('loading');
+                    registerBtn.textContent = 'Зарегистрироваться';
                     return;
                 }
 
+                // Создаем профиль пользователя
                 const avatarUrl = `https://ui-avatars.com/api/?background=667eea&color=fff&name=${encodeURIComponent(nickname)}`;
 
-                const { error: userError } = await sbClient
-                    .from('users')
-                    .insert([{
-                        id: authData.user.id,
-                        email: email,
-                        nickname: nickname,
-                        avatar_url: avatarUrl,
-                        status: 'online'
-                    }]);
+                // Пробуем вставить с повторной попыткой
+                let retries = 3;
+                let inserted = false;
 
-                if (userError) {
-                    console.error('User insert error:', userError);
-                    document.getElementById('regError').textContent = 'Ошибка создания профиля';
+                while (retries > 0 && !inserted) {
+                    const { error: userError } = await sbClient
+                        .from('users')
+                        .insert([{
+                            id: authData.user.id,
+                            email: email,
+                            nickname: nickname,
+                            avatar_url: avatarUrl,
+                            status: 'online'
+                        }]);
+
+                    if (!userError) {
+                        inserted = true;
+                        break;
+                    }
+
+                    if (userError.code === '23505') {
+                        document.getElementById('regError').textContent = 'Пользователь с таким email или ником уже существует';
+                        break;
+                    }
+
+                    retries--;
+                    if (retries > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+
+                if (!inserted) {
+                    document.getElementById('regError').textContent = 'Ошибка создания профиля. Попробуйте позже.';
+                    registerBtn.classList.remove('loading');
+                    registerBtn.textContent = 'Зарегистрироваться';
                     return;
                 }
 
@@ -602,7 +656,10 @@
 
             } catch (error) {
                 console.error('Registration error:', error);
-                document.getElementById('regError').textContent = 'Ошибка: ' + error.message;
+                document.getElementById('regError').textContent = 'Ошибка соединения. Попробуйте позже.';
+            } finally {
+                registerBtn.classList.remove('loading');
+                registerBtn.textContent = 'Зарегистрироваться';
             }
         }
 
@@ -617,6 +674,9 @@
                 return;
             }
 
+            loginBtn.classList.add('loading');
+            loginBtn.textContent = 'Вход...';
+
             try {
                 const { data, error } = await sbClient.auth.signInWithPassword({
                     email: email,
@@ -625,21 +685,55 @@
 
                 if (error) {
                     document.getElementById('loginError').textContent = 'Неверный email или пароль';
+                    loginBtn.classList.remove('loading');
+                    loginBtn.textContent = 'Войти';
                     return;
                 }
 
                 currentUser = data.user;
 
-                const { data: userData, error: userError } = await sbClient
-                    .from('users')
-                    .select('*')
-                    .eq('id', currentUser.id)
-                    .single();
+                // Получаем профиль с повторной попыткой
+                let retries = 3;
+                let userData = null;
 
-                if (userError) {
-                    console.error('User fetch error:', userError);
-                    document.getElementById('loginError').textContent = 'Ошибка загрузки профиля';
-                    return;
+                while (retries > 0 && !userData) {
+                    const { data: data2, error: userError } = await sbClient
+                        .from('users')
+                        .select('*')
+                        .eq('id', currentUser.id)
+                        .maybeSingle();
+
+                    if (!userError && data2) {
+                        userData = data2;
+                        break;
+                    }
+
+                    retries--;
+                    if (retries > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+
+                if (!userData) {
+                    // Если профиля нет, создаем его
+                    const avatarUrl = `https://ui-avatars.com/api/?background=667eea&color=fff&name=${encodeURIComponent(currentUser.email.split('@')[0])}`;
+                    await sbClient
+                        .from('users')
+                        .insert([{
+                            id: currentUser.id,
+                            email: currentUser.email,
+                            nickname: currentUser.email.split('@')[0],
+                            avatar_url: avatarUrl,
+                            status: 'online'
+                        }]);
+
+                    const { data: newUserData } = await sbClient
+                        .from('users')
+                        .select('*')
+                        .eq('id', currentUser.id)
+                        .single();
+
+                    userData = newUserData;
                 }
 
                 currentUser.profile = userData;
@@ -655,6 +749,9 @@
             } catch (error) {
                 console.error('Login error:', error);
                 document.getElementById('loginError').textContent = 'Ошибка входа';
+            } finally {
+                loginBtn.classList.remove('loading');
+                loginBtn.textContent = 'Войти';
             }
         }
 
@@ -715,7 +812,7 @@
                                 .from('users')
                                 .select('nickname, avatar_url')
                                 .eq('id', otherUserId)
-                                .single();
+                                .maybeSingle();
 
                             if (otherUser) {
                                 displayName = otherUser.nickname;
@@ -1080,7 +1177,7 @@
                 .from('users')
                 .select('id')
                 .eq('nickname', nickname)
-                .single();
+                .maybeSingle();
 
             if (user) {
                 await sbClient
@@ -1100,7 +1197,7 @@
                 .from('users')
                 .select('id')
                 .eq('nickname', nickname)
-                .single();
+                .maybeSingle();
 
             if (!user) {
                 alert('Пользователь не найден');
@@ -1234,7 +1331,6 @@
         // Проверка сессии при загрузке
         sbClient.auth.getSession().then(({ data: { session } }) => {
             if (session) {
-                // Автоматически загружаем пользователя
                 setTimeout(() => {
                     login();
                 }, 100);
