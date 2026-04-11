@@ -3,588 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Clone - Регистрация Email + Пароль</title>
+    <title>Telegram Clone - Supabase</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #0a0a0a;
             height: 100vh;
-            overflow: hidden;
+            color: white;
         }
 
+        /* Auth Styles */
         .auth-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-
         .auth-box {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            width: 380px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            background: white; padding: 40px; border-radius: 20px;
+            width: 380px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); color: #333;
         }
-
-        .auth-box h2 {
-            margin-bottom: 20px;
-            text-align: center;
-            color: #333;
-        }
-
+        .auth-box h2 { margin-bottom: 20px; text-align: center; }
         .auth-box input {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            font-size: 14px;
-            outline: none;
+            width: 100%; padding: 12px; margin-bottom: 15px;
+            border: 1px solid #ddd; border-radius: 10px; outline: none;
         }
-
         .auth-box button {
-            width: 100%;
-            padding: 12px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-bottom: 10px;
+            width: 100%; padding: 12px; background: #667eea;
+            color: white; border: none; border-radius: 10px;
+            cursor: pointer; margin-bottom: 10px; font-weight: bold;
         }
+        .switch-btn { background: #f0f0f0 !important; color: #333 !important; }
+        .error { color: #ff4d4d; font-size: 13px; margin-bottom: 10px; text-align: center; }
+        .success { color: #2ecc71; font-size: 13px; margin-bottom: 10px; text-align: center; }
 
-        .auth-box button:hover {
-            background: #5a67d8;
-        }
-
-        .switch-btn {
-            background: #e0e0e0 !important;
-            color: #333 !important;
-        }
-
-        .error {
-            color: red;
-            font-size: 12px;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .success {
-            color: green;
-            font-size: 12px;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .app {
-            display: flex;
-            height: 100vh;
-        }
-
+        /* App Styles */
+        .app { display: flex; height: 100vh; }
         .sidebar {
-            width: 300px;
-            background: #1f1f1f;
-            border-right: 1px solid #2c2c2c;
-            display: flex;
-            flex-direction: column;
+            width: 300px; background: #1f1f1f;
+            border-right: 1px solid #2c2c2c; display: flex; flex-direction: column;
         }
-
-        .sidebar-header {
-            padding: 20px;
-            border-bottom: 1px solid #2c2c2c;
-        }
-
-        .sidebar-header h1 {
-            color: white;
-            font-size: 24px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-top: 15px;
-            padding: 8px;
-            cursor: pointer;
-            border-radius: 10px;
-        }
-
-        .user-info:hover {
-            background: #2c2c2c;
-        }
-
+        .sidebar-header { padding: 20px; border-bottom: 1px solid #2c2c2c; }
+        .user-info { display: flex; align-items: center; gap: 12px; margin-top: 15px; }
         .avatar {
-            width: 45px;
-            height: 45px;
-            background: #667eea;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            color: white;
+            width: 40px; height: 40px; background: #667eea;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
         }
-
-        .user-name {
-            color: white;
-            font-weight: 500;
-        }
-
-        .user-email {
-            color: #888;
-            font-size: 12px;
-        }
-
         .logout-btn {
-            margin-top: 10px;
-            padding: 8px;
-            background: #dc2626;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 12px;
+            background: none; border: 1px solid #ff4d4d; color: #ff4d4d;
+            padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 10px; font-size: 12px;
         }
+        .chat-area { flex: 1; display: flex; flex-direction: column; }
+        .messages-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
 
-        .logout-btn:hover {
-            background: #b91c1c;
+        .message { display: flex; width: 100%; }
+        .message.sent { justify-content: flex-end; }
+        .message.received { justify-content: flex-start; }
+        .bubble {
+            max-width: 70%; padding: 10px 15px; border-radius: 15px;
+            position: relative; font-size: 14px;
         }
+        .message.sent .bubble { background: #667eea; color: white; border-bottom-right-radius: 2px; }
+        .message.received .bubble { background: #2c2c2c; color: white; border-bottom-left-radius: 2px; }
+        .msg-meta { font-size: 10px; opacity: 0.6; margin-top: 5px; text-align: right; }
 
-        .chats-list {
-            flex: 1;
-            overflow-y: auto;
+        .input-area { padding: 20px; background: #1f1f1f; display: flex; gap: 10px; }
+        .input-area input {
+            flex: 1; background: #2c2c2c; border: none; padding: 12px;
+            border-radius: 20px; color: white; outline: none;
         }
-
-        .chat-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 20px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .chat-item:hover {
-            background: #2c2c2c;
-        }
-
-        .chat-item.active {
-            background: #2c2c2c;
-        }
-
-        .chat-avatar {
-            width: 45px;
-            height: 45px;
-            background: #2c2c2c;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-
-        .chat-name {
-            color: white;
-            font-weight: 500;
-        }
-
-        .chat-preview {
-            color: #888;
-            font-size: 12px;
-        }
-
-        .chat-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #0a0a0a;
-        }
-
-        .chat-header {
-            background: #1f1f1f;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            border-bottom: 1px solid #2c2c2c;
-        }
-
-        .chat-header h3 {
-            color: white;
-        }
-
-        .messages-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .message {
-            display: flex;
-            margin-bottom: 8px;
-        }
-
-        .message.sent {
-            justify-content: flex-end;
-        }
-
-        .message.received {
-            justify-content: flex-start;
-        }
-
-        .message-bubble {
-            max-width: 60%;
-            padding: 10px 15px;
-            border-radius: 18px;
-        }
-
-        .message.sent .message-bubble {
-            background: #667eea;
-            color: white;
-        }
-
-        .message.received .message-bubble {
-            background: #1f1f1f;
-            color: white;
-        }
-
-        .message-text {
-            font-size: 14px;
-        }
-
-        .message-time {
-            font-size: 10px;
-            opacity: 0.7;
-            margin-top: 4px;
-        }
-
-        .input-area {
-            background: #1f1f1f;
-            padding: 15px 20px;
-            display: flex;
-            gap: 10px;
-            border-top: 1px solid #2c2c2c;
-        }
-
-        .message-input {
-            flex: 1;
-            background: #2c2c2c;
-            border: none;
-            padding: 12px 18px;
-            border-radius: 25px;
-            color: white;
-            outline: none;
-        }
-
-        .send-button {
-            background: #667eea;
-            border: none;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            cursor: pointer;
-            color: white;
-            font-size: 18px;
-        }
+        .send-btn { background: #667eea; border: none; width: 45px; height: 45px; border-radius: 50%; color: white; cursor: pointer; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script>
-        // Конфигурация Supabase
+        // Инициализация Supabase
         const SB_URL = 'https://xxqvsnxcudrwoyofjnie.supabase.co';
         const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4cXZzbnhjdWRyd295b2ZqbmllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NDk3MzMsImV4cCI6MjA5MTIyNTczM30.p6ryAFSevRpZKBQ7m0PSw7POPnIaD3TbtPMEcKfIeRI';
-
         const supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
         let CURRENT_USER = null;
-        let CURRENT_CHAT = 'general';
         let MESSAGES = [];
 
-        // Страница входа/регистрации
-        function renderAuth() {
+        // Функция отрисовки входа
+        function renderAuth(isLogin = true) {
             const root = document.getElementById('root');
             root.innerHTML = `
                 <div class="auth-container">
                     <div class="auth-box">
-                        <h2 id="formTitle">📱 Вход</h2>
-                        <div id="messageDiv"></div>
-                        <input type="email" id="emailInput" placeholder="Email" autocomplete="off">
-                        <input type="password" id="passwordInput" placeholder="Пароль">
-                        <input type="text" id="nicknameInput" placeholder="Никнейм" style="display:none;">
-                        <button id="actionButton">Войти</button>
-                        <button id="switchButton" class="switch-btn">Нет аккаунта? Регистрация</button>
+                        <h2>${isLogin ? '📱 Вход' : '📝 Регистрация'}</h2>
+                        <div id="statusMsg"></div>
+                        ${!isLogin ? '<input type="text" id="nickInp" placeholder="Ваш никнейм">' : ''}
+                        <input type="email" id="emailInp" placeholder="Email">
+                        <input type="password" id="passInp" placeholder="Пароль">
+                        <button id="mainBtn">${isLogin ? 'Войти' : 'Создать аккаунт'}</button>
+                        <button class="switch-btn" onclick="renderAuth(${!isLogin})">
+                            ${isLogin ? 'Нет аккаунта? Регистрация' : 'Уже есть аккаунт? Вход'}
+                        </button>
                     </div>
                 </div>
             `;
 
-            let isLogin = true;
-            const titleEl = document.getElementById('formTitle');
-            const actionBtn = document.getElementById('actionButton');
-            const switchBtn = document.getElementById('switchButton');
-            const emailInp = document.getElementById('emailInput');
-            const passwordInp = document.getElementById('passwordInput');
-            const nicknameInp = document.getElementById('nicknameInput');
-            const messageDiv = document.getElementById('messageDiv');
-
-            actionBtn.onclick = async () => {
-                const email = emailInp.value.trim();
-                const password = passwordInp.value;
-
-                if (!email || !password) {
-                    messageDiv.innerHTML = '<div class="error">Заполните все поля</div>';
-                    return;
-                }
+            document.getElementById('mainBtn').onclick = async () => {
+                const email = document.getElementById('emailInp').value;
+                const pass = document.getElementById('passInp').value;
+                const status = document.getElementById('statusMsg');
 
                 if (isLogin) {
-                    // ВХОД
-                    const { data, error } = await supabase.auth.signInWithPassword({
-                        email: email,
-                        password: password
-                    });
+                    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+                    if (error) return status.innerHTML = `<p class="error">${error.message}</p>`;
 
-                    if (error) {
-                        messageDiv.innerHTML = `<div class="error">${error.message}</div>`;
-                    } else {
-                        // Получаем профиль пользователя
-                        const { data: profile } = await supabase
-                            .from('users')
-                            .select('*')
-                            .eq('id', data.user.id)
-                            .single();
-
-                        CURRENT_USER = {
-                            id: data.user.id,
-                            email: data.user.email,
-                            nickname: profile?.nickname || data.user.email.split('@')[0]
-                        };
-
-                        localStorage.setItem('tg_user', JSON.stringify(CURRENT_USER));
-                        renderMainApp();
-                    }
+                    // Получаем доп. данные пользователя из таблицы users
+                    const { data: profile } = await supabase.from('users').select('*').eq('id', data.user.id).single();
+                    CURRENT_USER = { id: data.user.id, email: data.user.email, nickname: profile?.nickname || 'User' };
+                    saveAndStart();
                 } else {
-                    // РЕГИСТРАЦИЯ
-                    const nickname = nicknameInp.value.trim();
-                    if (!nickname) {
-                        messageDiv.innerHTML = '<div class="error">Введите никнейм</div>';
-                        return;
-                    }
+                    const nick = document.getElementById('nickInp').value;
+                    if (!nick) return status.innerHTML = `<p class="error">Введите ник!</p>`;
 
-                    const { data, error } = await supabase.auth.signUp({
-                        email: email,
-                        password: password,
-                        options: {
-                            data: {
-                                nickname: nickname
-                            }
-                        }
-                    });
+                    const { data, error } = await supabase.auth.signUp({ email, password: pass });
+                    if (error) return status.innerHTML = `<p class="error">${error.message}</p>`;
 
-                    if (error) {
-                        messageDiv.innerHTML = `<div class="error">${error.message}</div>`;
-                    } else {
-                        // Создаем профиль в таблице users
-                        await supabase.from('users').insert({
-                            id: data.user.id,
-                            email: email,
-                            nickname: nickname,
-                            fullname: nickname,
-                            created_at: new Date()
-                        });
-
-                        messageDiv.innerHTML = '<div class="success">Регистрация успешна! Теперь войдите.</div>';
-                        // Переключаемся на форму входа
-                        isLogin = true;
-                        titleEl.innerText = '📱 Вход';
-                        actionBtn.innerText = 'Войти';
-                        switchBtn.innerText = 'Нет аккаунта? Регистрация';
-                        nicknameInp.style.display = 'none';
-                        emailInp.value = '';
-                        passwordInp.value = '';
-                        nicknameInp.value = '';
-                    }
+                    // Сохраняем ник в таблицу
+                    await supabase.from('users').insert([{ id: data.user.id, email, nickname: nick, fullname: nick }]);
+                    status.innerHTML = `<p class="success">Регистрация успешна! Войдите.</p>`;
+                    setTimeout(() => renderAuth(true), 1500);
                 }
-            };
-
-            switchBtn.onclick = () => {
-                isLogin = !isLogin;
-                if (isLogin) {
-                    titleEl.innerText = '📱 Вход';
-                    actionBtn.innerText = 'Войти';
-                    switchBtn.innerText = 'Нет аккаунта? Регистрация';
-                    nicknameInp.style.display = 'none';
-                } else {
-                    titleEl.innerText = '📝 Регистрация';
-                    actionBtn.innerText = 'Зарегистрироваться';
-                    switchBtn.innerText = 'Уже есть аккаунт? Вход';
-                    nicknameInp.style.display = 'block';
-                }
-                messageDiv.innerHTML = '';
             };
         }
 
-        // Загрузка сообщений
+        function saveAndStart() {
+            localStorage.setItem('tg_user', JSON.stringify(CURRENT_USER));
+            renderMainApp();
+        }
+
         async function loadMessages() {
-            const { data, error } = await supabase
-                .from('messages')
-                .select('*')
-                .eq('chat_id', CURRENT_CHAT)
-                .order('created_at', { ascending: true });
-
-            if (!error && data) {
-                MESSAGES = data;
-            }
-        }
-
-        // Отправка сообщения
-        async function sendMessage() {
-            const input = document.getElementById('msgInput');
-            const content = input.value.trim();
-
-            if (!content) return;
-
-            await supabase.from('messages').insert({
-                text: content,
-                user_id: CURRENT_USER.id,
-                chat_id: CURRENT_CHAT,
-                created_at: new Date()
-            });
-
-            input.value = '';
-            await loadMessages();
+            const { data } = await supabase.from('messages').select('*').order('created_at', { ascending: true });
+            MESSAGES = data || [];
             renderMessages();
         }
 
-        // Отображение сообщений
         function renderMessages() {
-            const container = document.getElementById('messagesContainer');
+            const container = document.getElementById('msgList');
             if (!container) return;
-
-            if (MESSAGES.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #888; padding: 40px;">💬 Нет сообщений</div>';
-                return;
-            }
-
-            container.innerHTML = MESSAGES.map(msg => {
-                const isSent = msg.user_id === CURRENT_USER.id;
-                const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                return `
-                    <div class="message ${isSent ? 'sent' : 'received'}">
-                        <div class="message-bubble">
-                            <div class="message-text">${escapeHtml(msg.text)}</div>
-                            <div class="message-time">${time}</div>
-                        </div>
+            container.innerHTML = MESSAGES.map(m => `
+                <div class="message ${m.user_id === CURRENT_USER.id ? 'sent' : 'received'}">
+                    <div class="bubble">
+                        ${m.text}
+                        <div class="msg-meta">${new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
                     </div>
-                `;
-            }).join('');
-
+                </div>
+            `).join('');
             container.scrollTop = container.scrollHeight;
         }
 
-        // Выход
-        async function logout() {
-            await supabase.auth.signOut();
-            localStorage.removeItem('tg_user');
-            CURRENT_USER = null;
-            renderAuth();
+        async function sendMsg() {
+            const inp = document.getElementById('msgInput');
+            if (!inp.value.trim()) return;
+
+            const text = inp.value;
+            inp.value = '';
+
+            const { error } = await supabase.from('messages').insert([
+                { text: text, user_id: CURRENT_USER.id, chat_id: 'general' }
+            ]);
+            if (error) console.error(error);
         }
 
-        // Основной интерфейс
         function renderMainApp() {
-            const root = document.getElementById('root');
-            root.innerHTML = `
+            document.getElementById('root').innerHTML = `
                 <div class="app">
                     <div class="sidebar">
                         <div class="sidebar-header">
-                            <h1>Telegram</h1>
-                            <div class="user-info" onclick="alert('Email: ${CURRENT_USER.email}\\nНик: ${CURRENT_USER.nickname}')">
-                                <div class="avatar">${CURRENT_USER.nickname ? CURRENT_USER.nickname[0].toUpperCase() : 'U'}</div>
+                            <h3>Telegram Clone</h3>
+                            <div class="user-info">
+                                <div class="avatar">${CURRENT_USER.nickname[0].toUpperCase()}</div>
                                 <div>
-                                    <div class="user-name">${CURRENT_USER.nickname}</div>
-                                    <div class="user-email">${CURRENT_USER.email}</div>
+                                    <div style="font-weight:bold">${CURRENT_USER.nickname}</div>
+                                    <div style="font-size:11px; opacity:0.6">${CURRENT_USER.email}</div>
                                 </div>
                             </div>
-                            <button class="logout-btn" onclick="logout()">🚪 Выйти</button>
-                        </div>
-                        <div class="chats-list">
-                            <div class="chat-item active">
-                                <div class="chat-avatar">💬</div>
-                                <div>
-                                    <div class="chat-name">Общий чат</div>
-                                    <div class="chat-preview">${getLastMessagePreview()}</div>
-                                </div>
-                            </div>
+                            <button class="logout-btn" onclick="localStorage.clear(); location.reload();">Выйти</button>
                         </div>
                     </div>
                     <div class="chat-area">
-                        <div class="chat-header">
-                            <div class="chat-avatar">💬</div>
-                            <h3>Общий чат</h3>
-                        </div>
-                        <div class="messages-area" id="messagesContainer"></div>
+                        <div style="padding:15px; background:#1f1f1f; border-bottom:1px solid #2c2c2c">Общий чат</div>
+                        <div class="messages-area" id="msgList"></div>
                         <div class="input-area">
-                            <input type="text" class="message-input" id="msgInput" placeholder="Сообщение..." onkeypress="if(event.key==='Enter') sendMessage()">
-                            <button class="send-button" onclick="sendMessage()">➤</button>
+                            <input type="text" id="msgInput" placeholder="Написать сообщение..." onkeypress="if(event.key==='Enter') sendMsg()">
+                            <button class="send-btn" onclick="sendMsg()">➤</button>
                         </div>
                     </div>
                 </div>
             `;
+            loadMessages();
 
-            loadMessages().then(() => {
+            // Realtime подписка
+            supabase.channel('msgs').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+                MESSAGES.push(payload.new);
                 renderMessages();
-            });
-
-            setupRealtime();
+            }).subscribe();
         }
 
-        function getLastMessagePreview() {
-            if (MESSAGES.length === 0) return 'Нет сообщений';
-            const lastMsg = MESSAGES[MESSAGES.length - 1];
-            return lastMsg.text.length > 30 ? lastMsg.text.substring(0, 30) + '...' : lastMsg.text;
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function setupRealtime() {
-            supabase
-                .channel('public:messages')
-                .on('postgres_changes',
-                    { event: 'INSERT', schema: 'public', table: 'messages' },
-                    async () => {
-                        await loadMessages();
-                        renderMessages();
-                    }
-                )
-                .subscribe();
-        }
-
-        // Запуск
-        const savedUser = localStorage.getItem('tg_user');
-        if (savedUser) {
-            CURRENT_USER = JSON.parse(savedUser);
-            renderMainApp();
-        } else {
-            renderAuth();
-        }
+        // Старт приложения
+        window.onload = () => {
+            const saved = localStorage.getItem('tg_user');
+            if (saved) {
+                CURRENT_USER = JSON.parse(saved);
+                renderMainApp();
+            } else {
+                renderAuth();
+            }
+        };
     </script>
 </body>
 </html>
