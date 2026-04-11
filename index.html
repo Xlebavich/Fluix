@@ -2,221 +2,173 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Clone - Supabase</title>
+    <title>TG Super Clone</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #0a0a0a;
-            height: 100vh;
-            color: white;
-        }
+        :root { --bg: #0e1621; --side: #17212b; --active: #2481cc; --text: #fff; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; display: flex; height: 100vh; overflow: hidden; }
 
-        /* Auth Styles */
-        .auth-container {
-            display: flex; justify-content: center; align-items: center;
-            height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .auth-box {
-            background: white; padding: 40px; border-radius: 20px;
-            width: 380px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); color: #333;
-        }
-        .auth-box h2 { margin-bottom: 20px; text-align: center; }
-        .auth-box input {
-            width: 100%; padding: 12px; margin-bottom: 15px;
-            border: 1px solid #ddd; border-radius: 10px; outline: none;
-        }
-        .auth-box button {
-            width: 100%; padding: 12px; background: #667eea;
-            color: white; border: none; border-radius: 10px;
-            cursor: pointer; margin-bottom: 10px; font-weight: bold;
-        }
-        .switch-btn { background: #f0f0f0 !important; color: #333 !important; }
-        .error { color: #ff4d4d; font-size: 13px; margin-bottom: 10px; text-align: center; }
-        .success { color: #2ecc71; font-size: 13px; margin-bottom: 10px; text-align: center; }
+        /* Sidebar */
+        .sidebar { width: 300px; background: var(--side); border-right: 1px solid #000; display: flex; flex-direction: column; }
+        .user-card { padding: 15px; border-bottom: 1px solid #0e1621; display: flex; align-items: center; gap: 10px; }
+        .avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #333; }
 
-        /* App Styles */
-        .app { display: flex; height: 100vh; }
-        .sidebar {
-            width: 300px; background: #1f1f1f;
-            border-right: 1px solid #2c2c2c; display: flex; flex-direction: column;
-        }
-        .sidebar-header { padding: 20px; border-bottom: 1px solid #2c2c2c; }
-        .user-info { display: flex; align-items: center; gap: 12px; margin-top: 15px; }
-        .avatar {
-            width: 40px; height: 40px; background: #667eea;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        }
-        .logout-btn {
-            background: none; border: 1px solid #ff4d4d; color: #ff4d4d;
-            padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 10px; font-size: 12px;
-        }
-        .chat-area { flex: 1; display: flex; flex-direction: column; }
-        .messages-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        /* Chat */
+        .main { flex: 1; display: flex; flex-direction: column; position: relative; }
+        .chat-header { padding: 15px; background: var(--side); font-weight: bold; }
+        .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
 
-        .message { display: flex; width: 100%; }
-        .message.sent { justify-content: flex-end; }
-        .message.received { justify-content: flex-start; }
-        .bubble {
-            max-width: 70%; padding: 10px 15px; border-radius: 15px;
-            position: relative; font-size: 14px;
-        }
-        .message.sent .bubble { background: #667eea; color: white; border-bottom-right-radius: 2px; }
-        .message.received .bubble { background: #2c2c2c; color: white; border-bottom-left-radius: 2px; }
-        .msg-meta { font-size: 10px; opacity: 0.6; margin-top: 5px; text-align: right; }
+        /* Bubbles */
+        .msg { max-width: 70%; padding: 10px; border-radius: 12px; position: relative; font-size: 14px; line-height: 1.4; }
+        .sent { align-self: flex-end; background: #2b5278; }
+        .received { align-self: flex-start; background: #182533; }
+        .media-content { max-width: 100%; border-radius: 8px; margin-top: 5px; }
 
-        .input-area { padding: 20px; background: #1f1f1f; display: flex; gap: 10px; }
-        .input-area input {
-            flex: 1; background: #2c2c2c; border: none; padding: 12px;
-            border-radius: 20px; color: white; outline: none;
-        }
-        .send-btn { background: #667eea; border: none; width: 45px; height: 45px; border-radius: 50%; color: white; cursor: pointer; }
+        /* Input */
+        .input-area { padding: 15px; background: var(--side); display: flex; gap: 10px; align-items: center; }
+        input[type="text"] { flex: 1; padding: 10px; border-radius: 20px; border: none; background: #242f3d; color: #fff; outline: none; }
+        .btn { cursor: pointer; padding: 8px 15px; border-radius: 20px; background: var(--active); border: none; color: #fff; }
+
+        /* Auth */
+        .modal { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .auth-box { background: var(--side); padding: 30px; border-radius: 15px; width: 300px; text-align: center; }
+
+        /* Utils */
+        .hidden { display: none !important; }
+        .emoji-btn { font-size: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div id="root"></div>
 
-    <script>
-        // Инициализация Supabase
-        const SB_URL = 'https://xxqvsnxcudrwoyofjnie.supabase.co';
-        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4cXZzbnhjdWRyd295b2ZqbmllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NDk3MzMsImV4cCI6MjA5MTIyNTczM30.p6ryAFSevRpZKBQ7m0PSw7POPnIaD3TbtPMEcKfIeRI';
-        const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+<div id="auth-screen" class="modal">
+    <div class="auth-box">
+        <h2 id="auth-title">Вход</h2>
+        <input type="text" id="auth-nick" placeholder="Никнейм (для рег.)">
+        <input type="email" id="auth-email" placeholder="Email">
+        <input type="password" id="auth-pass" placeholder="Пароль">
+        <button class="btn" onclick="handleAuth()">Продолжить</button>
+        <p onclick="toggleAuth()" style="font-size: 12px; margin-top: 15px; cursor: pointer; color: var(--active)">Сменить вход/регистрация</p>
+    </div>
+</div>
 
-        let CURRENT_USER = null;
-        let MESSAGES = [];
+<div class="sidebar">
+    <div class="user-card" id="my-profile">
+        <img src="" class="avatar" id="my-avatar">
+        <div id="my-name">Загрузка...</div>
+    </div>
+    <div style="padding: 10px;">
+        <button class="btn" style="width: 100%;" onclick="addFriend()">+ Добавить друга (по Email)</button>
+    </div>
+    <div id="chat-list" style="overflow-y: auto; flex: 1;">
+        </div>
+</div>
 
-        // Функция отрисовки входа
-        function renderAuth(isLogin = true) {
-            const root = document.getElementById('root');
-            root.innerHTML = `
-                <div class="auth-container">
-                    <div class="auth-box">
-                        <h2>${isLogin ? '📱 Вход' : '📝 Регистрация'}</h2>
-                        <div id="statusMsg"></div>
-                        ${!isLogin ? '<input type="text" id="nickInp" placeholder="Ваш никнейм">' : ''}
-                        <input type="email" id="emailInp" placeholder="Email">
-                        <input type="password" id="passInp" placeholder="Пароль">
-                        <button id="mainBtn">${isLogin ? 'Войти' : 'Создать аккаунт'}</button>
-                        <button class="switch-btn" onclick="renderAuth(${!isLogin})">
-                            ${isLogin ? 'Нет аккаунта? Регистрация' : 'Уже есть аккаунт? Вход'}
-                        </button>
-                    </div>
-                </div>
-            `;
+<div class="main">
+    <div class="chat-header" id="chat-title">Общий чат</div>
+    <div class="messages" id="msg-box"></div>
+    <div class="input-area">
+        <span class="emoji-btn" onclick="addEmoji('😊')">😊</span>
+        <label class="emoji-btn">📎<input type="file" id="file-input" class="hidden" onchange="uploadFile()"></label>
+        <input type="text" id="msg-input" placeholder="Сообщение..." onkeypress="if(event.key=='Enter') sendText()">
+        <button class="btn" onclick="sendText()">➤</button>
+    </div>
+</div>
 
-            document.getElementById('mainBtn').onclick = async () => {
-                const email = document.getElementById('emailInp').value;
-                const pass = document.getElementById('passInp').value;
-                const status = document.getElementById('statusMsg');
+<script>
+    const SB_URL = 'ТВОЙ_URL';
+    const SB_KEY = 'ТВОЙ_КЛЮЧ';
+    const supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
-                if (isLogin) {
-                    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-                    if (error) return status.innerHTML = `<p class="error">${error.message}</p>`;
+    let user = null;
+    let isLoginMode = true;
 
-                    // Получаем доп. данные пользователя из таблицы users
-                    const { data: profile } = await supabase.from('users').select('*').eq('id', data.user.id).single();
-                    CURRENT_USER = { id: data.user.id, email: data.user.email, nickname: profile?.nickname || 'User' };
-                    saveAndStart();
-                } else {
-                    const nick = document.getElementById('nickInp').value;
-                    if (!nick) return status.innerHTML = `<p class="error">Введите ник!</p>`;
-
-                    const { data, error } = await supabase.auth.signUp({ email, password: pass });
-                    if (error) return status.innerHTML = `<p class="error">${error.message}</p>`;
-
-                    // Сохраняем ник в таблицу
-                    await supabase.from('users').insert([{ id: data.user.id, email, nickname: nick, fullname: nick }]);
-                    status.innerHTML = `<p class="success">Регистрация успешна! Войдите.</p>`;
-                    setTimeout(() => renderAuth(true), 1500);
-                }
-            };
-        }
-
-        function saveAndStart() {
-            localStorage.setItem('tg_user', JSON.stringify(CURRENT_USER));
-            renderMainApp();
-        }
-
-        async function loadMessages() {
-            const { data } = await supabase.from('messages').select('*').order('created_at', { ascending: true });
-            MESSAGES = data || [];
-            renderMessages();
-        }
-
-        function renderMessages() {
-            const container = document.getElementById('msgList');
-            if (!container) return;
-            container.innerHTML = MESSAGES.map(m => `
-                <div class="message ${m.user_id === CURRENT_USER.id ? 'sent' : 'received'}">
-                    <div class="bubble">
-                        ${m.text}
-                        <div class="msg-meta">${new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-                    </div>
-                </div>
-            `).join('');
-            container.scrollTop = container.scrollHeight;
-        }
-
-        async function sendMsg() {
-            const inp = document.getElementById('msgInput');
-            if (!inp.value.trim()) return;
-
-            const text = inp.value;
-            inp.value = '';
-
-            const { error } = await supabase.from('messages').insert([
-                { text: text, user_id: CURRENT_USER.id, chat_id: 'general' }
-            ]);
-            if (error) console.error(error);
-        }
-
-        function renderMainApp() {
-            document.getElementById('root').innerHTML = `
-                <div class="app">
-                    <div class="sidebar">
-                        <div class="sidebar-header">
-                            <h3>Telegram Clone</h3>
-                            <div class="user-info">
-                                <div class="avatar">${CURRENT_USER.nickname[0].toUpperCase()}</div>
-                                <div>
-                                    <div style="font-weight:bold">${CURRENT_USER.nickname}</div>
-                                    <div style="font-size:11px; opacity:0.6">${CURRENT_USER.email}</div>
-                                </div>
-                            </div>
-                            <button class="logout-btn" onclick="localStorage.clear(); location.reload();">Выйти</button>
-                        </div>
-                    </div>
-                    <div class="chat-area">
-                        <div style="padding:15px; background:#1f1f1f; border-bottom:1px solid #2c2c2c">Общий чат</div>
-                        <div class="messages-area" id="msgList"></div>
-                        <div class="input-area">
-                            <input type="text" id="msgInput" placeholder="Написать сообщение..." onkeypress="if(event.key==='Enter') sendMsg()">
-                            <button class="send-btn" onclick="sendMsg()">➤</button>
-                        </div>
-                    </div>
-                </div>
-            `;
+    async function init() {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+            user = data.session.user;
+            document.getElementById('auth-screen').classList.add('hidden');
+            loadProfile();
             loadMessages();
-
-            // Realtime подписка
-            supabase.channel('msgs').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-                MESSAGES.push(payload.new);
-                renderMessages();
-            }).subscribe();
+            subscribe();
         }
+    }
 
-        // Старт приложения
-        window.onload = () => {
-            const saved = localStorage.getItem('tg_user');
-            if (saved) {
-                CURRENT_USER = JSON.parse(saved);
-                renderMainApp();
-            } else {
-                renderAuth();
-            }
-        };
-    </script>
+    function toggleAuth() {
+        isLoginMode = !isLoginMode;
+        document.getElementById('auth-title').innerText = isLoginMode ? 'Вход' : 'Регистрация';
+        document.getElementById('auth-nick').classList.toggle('hidden', isLoginMode);
+    }
+
+    async function handleAuth() {
+        const email = document.getElementById('auth-email').value;
+        const pass = document.getElementById('auth-pass').value;
+        const nick = document.getElementById('auth-nick').value;
+
+        if (isLoginMode) {
+            await supabase.auth.signInWithPassword({ email, password: pass });
+        } else {
+            const { data } = await supabase.auth.signUp({ email, password: pass });
+            await supabase.from('users').insert({ id: data.user.id, email, nickname: nick });
+        }
+        location.reload();
+    }
+
+    async function loadProfile() {
+        const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
+        document.getElementById('my-name').innerText = data.nickname;
+        document.getElementById('my-avatar').src = data.avatar_url;
+    }
+
+    async function sendText() {
+        const inp = document.getElementById('msg-input');
+        if (!inp.value) return;
+        await supabase.from('messages').insert({ text: inp.value, user_id: user.id });
+        inp.value = '';
+    }
+
+    async function uploadFile() {
+        const file = document.getElementById('file-input').files[0];
+        if (!file) return;
+
+        const fName = `${Date.now()}_${file.name}`;
+        const { data, error } = await supabase.storage.from('media').upload(fName, file);
+
+        if (data) {
+            const { data: urlData } = supabase.storage.from('media').getPublicUrl(fName);
+            const type = file.type.includes('video') ? 'video' : 'image';
+            await supabase.from('messages').insert({
+                media_url: urlData.publicUrl,
+                media_type: type,
+                user_id: user.id
+            });
+        }
+    }
+
+    async function loadMessages() {
+        const { data } = await supabase.from('messages').select('*, users(nickname, avatar_url)').order('created_at', { ascending: true });
+        const box = document.getElementById('msg-box');
+        box.innerHTML = data.map(m => `
+            <div class="msg ${m.user_id === user.id ? 'sent' : 'received'}">
+                <div style="font-size: 11px; color: #4fa4ed; font-weight: bold;">${m.users?.nickname}</div>
+                ${m.text ? `<div>${m.text}</div>` : ''}
+                ${m.media_url ? (m.media_type === 'video' ?
+                    `<video src="${m.media_url}" class="media-content" controls></video>` :
+                    `<img src="${m.media_url}" class="media-content">`) : ''}
+                <div style="font-size: 9px; opacity: 0.5; text-align: right;">${new Date(m.created_at).toLocaleTimeString()}</div>
+            </div>
+        `).join('');
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function addEmoji(emoji) { document.getElementById('msg-input').value += emoji; }
+
+    function subscribe() {
+        supabase.channel('room1').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
+            loadMessages();
+        }).subscribe();
+    }
+
+    init();
+</script>
 </body>
 </html>
