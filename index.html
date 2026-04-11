@@ -48,14 +48,7 @@
             border-radius: 50%;
             object-fit: cover;
             cursor: pointer;
-        }
-
-        .avatar-large {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-bottom: 16px;
+            background: #667eea;
         }
 
         .user-info {
@@ -135,6 +128,7 @@
             height: 48px;
             border-radius: 50%;
             object-fit: cover;
+            background: #667eea;
         }
 
         .chat-details {
@@ -152,11 +146,6 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-        }
-
-        .chat-time {
-            font-size: 11px;
-            color: #999;
         }
 
         .chat-area {
@@ -364,12 +353,6 @@
             cursor: pointer;
         }
 
-        .group-members {
-            padding: 8px;
-            font-size: 12px;
-            color: #666;
-        }
-
         .error-message {
             color: #f44336;
             font-size: 12px;
@@ -383,6 +366,10 @@
             margin-top: 5px;
             text-align: center;
         }
+
+        button {
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -394,8 +381,8 @@
                 <input type="email" id="loginEmail" placeholder="Email" required>
                 <input type="password" id="loginPassword" placeholder="Пароль" required>
                 <div id="loginError" class="error-message"></div>
-                <button onclick="login()">Войти</button>
-                <div class="auth-switch" onclick="showRegister()">Нет аккаунта? Зарегистрироваться</div>
+                <button id="loginBtn">Войти</button>
+                <div class="auth-switch" id="showRegisterBtn">Нет аккаунта? Зарегистрироваться</div>
             </div>
             <div id="registerForm" style="display:none">
                 <input type="email" id="regEmail" placeholder="Email" required>
@@ -403,8 +390,8 @@
                 <input type="password" id="regPassword" placeholder="Пароль" required>
                 <div id="regError" class="error-message"></div>
                 <div id="regSuccess" class="success-message"></div>
-                <button onclick="register()">Зарегистрироваться</button>
-                <div class="auth-switch" onclick="showLogin()">Уже есть аккаунт? Войти</div>
+                <button id="registerBtn">Зарегистрироваться</button>
+                <div class="auth-switch" id="showLoginBtn">Уже есть аккаунт? Войти</div>
             </div>
         </div>
     </div>
@@ -413,19 +400,19 @@
     <div id="appContainer" class="app-container" style="display:none">
         <div class="sidebar">
             <div class="profile-header">
-                <img id="userAvatar" class="avatar" src="https://via.placeholder.com/48" alt="Avatar" onclick="changeAvatar()">
+                <img id="userAvatar" class="avatar" src="https://ui-avatars.com/api/?background=667eea&color=fff&name=User">
                 <div class="user-info">
                     <div class="user-nickname" id="userNickname"></div>
                     <div class="user-status" id="userStatus">online</div>
                 </div>
-                <button onclick="logout()" style="padding:6px 12px;background:#f44336;color:white;border:none;border-radius:6px;cursor:pointer">Выйти</button>
+                <button id="logoutBtn">Выйти</button>
             </div>
             <div class="search-box">
-                <input type="text" class="search-input" placeholder="Поиск..." id="searchInput" oninput="searchChats()">
+                <input type="text" class="search-input" placeholder="Поиск..." id="searchInput">
             </div>
             <div class="tabs">
-                <button class="tab active" onclick="switchTab('chats')">Чаты</button>
-                <button class="tab" onclick="switchTab('friends')">Друзья</button>
+                <button class="tab active" id="chatsTab">Чаты</button>
+                <button class="tab" id="friendsTab">Друзья</button>
             </div>
             <div id="chatsList" class="chats-list"></div>
             <div id="friendsList" class="chats-list" style="display:none"></div>
@@ -436,20 +423,22 @@
                 <div>
                     <div class="chat-title" id="currentChatName">Выберите чат</div>
                     <div id="groupControls" style="display:none">
-                        <button onclick="addMemberToGroup()" style="margin-top:5px;padding:4px 8px;font-size:12px;">➕ Добавить участника</button>
-                        <button onclick="editGroup()" style="margin-top:5px;padding:4px 8px;font-size:12px;">✏️ Редактировать</button>
+                        <button id="addMemberBtn">➕ Добавить участника</button>
+                        <button id="editGroupBtn">✏️ Редактировать</button>
                     </div>
                 </div>
                 <div class="chat-actions">
-                    <button onclick="deleteCurrentChat()">🗑 Удалить чат</button>
+                    <button id="deleteChatBtn">🗑 Удалить чат</button>
                 </div>
             </div>
-            <div id="messagesContainer" class="messages-container"></div>
+            <div id="messagesContainer" class="messages-container">
+                <div style="text-align:center;color:#999;margin-top:20px;">Выберите чат чтобы начать общение</div>
+            </div>
             <div class="input-area">
-                <button class="file-button" onclick="document.getElementById('fileInput').click()">📎</button>
-                <input type="file" id="fileInput" accept="image/*,video/*" style="display:none" onchange="sendFile(this)">
-                <textarea id="messageInput" class="message-input" placeholder="Введите сообщение..." rows="1" onkeypress="handleKeyPress(event)"></textarea>
-                <button class="send-button" onclick="sendMessage()">Отправить</button>
+                <button class="file-button" id="fileBtn">📎</button>
+                <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+                <textarea id="messageInput" class="message-input" placeholder="Введите сообщение..." rows="1"></textarea>
+                <button class="send-button" id="sendBtn">Отправить</button>
             </div>
         </div>
     </div>
@@ -458,8 +447,9 @@
     <div id="avatarModal" class="modal">
         <div class="modal-content">
             <h3>Сменить аватар</h3>
-            <input type="file" id="avatarInput" accept="image/*" onchange="uploadAvatar(this)">
-            <button onclick="closeAvatarModal()">Закрыть</button>
+            <input type="file" id="avatarInput" accept="image/*">
+            <button id="uploadAvatarBtn">Загрузить</button>
+            <button id="closeAvatarBtn">Закрыть</button>
         </div>
     </div>
 
@@ -468,8 +458,8 @@
             <h3 id="groupModalTitle">Создать группу</h3>
             <input type="text" id="groupName" placeholder="Название группы">
             <input type="text" id="groupMembers" placeholder="Никнеймы участников (через запятую)">
-            <button onclick="createOrUpdateGroup()">Создать</button>
-            <button onclick="closeGroupModal()">Отмена</button>
+            <button id="createGroupBtn">Создать</button>
+            <button id="closeGroupBtn">Отмена</button>
         </div>
     </div>
 
@@ -477,8 +467,8 @@
         <div class="modal-content">
             <h3>Добавить друга</h3>
             <input type="text" id="friendNickname" placeholder="Никнейм друга">
-            <button onclick="addFriend()">Отправить заявку</button>
-            <button onclick="closeFriendModal()">Отмена</button>
+            <button id="addFriendBtn">Отправить заявку</button>
+            <button id="closeFriendBtn">Отмена</button>
         </div>
     </div>
 
@@ -494,30 +484,56 @@
         let currentTab = 'chats';
         let messagesSubscription = null;
 
-        // Функции авторизации
-        window.showRegister = function() {
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
+        // DOM элементы
+        const authContainer = document.getElementById('authContainer');
+        const appContainer = document.getElementById('appContainer');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const registerBtn = document.getElementById('registerBtn');
+        const showRegisterBtn = document.getElementById('showRegisterBtn');
+        const showLoginBtn = document.getElementById('showLoginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const chatsTab = document.getElementById('chatsTab');
+        const friendsTab = document.getElementById('friendsTab');
+        const chatsListDiv = document.getElementById('chatsList');
+        const friendsListDiv = document.getElementById('friendsList');
+        const userNicknameSpan = document.getElementById('userNickname');
+        const userAvatarImg = document.getElementById('userAvatar');
+        const currentChatNameSpan = document.getElementById('currentChatName');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const fileBtn = document.getElementById('fileBtn');
+        const fileInput = document.getElementById('fileInput');
+        const deleteChatBtn = document.getElementById('deleteChatBtn');
+        const addMemberBtn = document.getElementById('addMemberBtn');
+        const editGroupBtn = document.getElementById('editGroupBtn');
+        const groupControls = document.getElementById('groupControls');
+        const searchInput = document.getElementById('searchInput');
+
+        // Функции
+        function showRegister() {
+            loginForm.style.display = 'none';
+            registerForm.style.display = 'block';
             document.getElementById('regError').textContent = '';
             document.getElementById('regSuccess').textContent = '';
-        };
+        }
 
-        window.showLogin = function() {
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('registerForm').style.display = 'none';
+        function showLogin() {
+            loginForm.style.display = 'block';
+            registerForm.style.display = 'none';
             document.getElementById('loginError').textContent = '';
-        };
+        }
 
-        window.register = async function() {
+        async function register() {
             const email = document.getElementById('regEmail').value.trim();
             const nickname = document.getElementById('regNickname').value.trim();
             const password = document.getElementById('regPassword').value;
 
-            // Очистка сообщений
             document.getElementById('regError').textContent = '';
             document.getElementById('regSuccess').textContent = '';
 
-            // Валидация
             if (!email || !nickname || !password) {
                 document.getElementById('regError').textContent = 'Заполните все поля';
                 return;
@@ -534,14 +550,11 @@
             }
 
             try {
-                // Регистрация в Supabase Auth
                 const { data: authData, error: authError } = await supabase.auth.signUp({
                     email: email,
                     password: password,
                     options: {
-                        data: {
-                            nickname: nickname
-                        }
+                        data: { nickname: nickname }
                     }
                 });
 
@@ -559,7 +572,6 @@
                     return;
                 }
 
-                // Создание профиля пользователя
                 const avatarUrl = `https://ui-avatars.com/api/?background=667eea&color=fff&name=${encodeURIComponent(nickname)}`;
 
                 const { error: userError } = await supabase
@@ -574,18 +586,16 @@
 
                 if (userError) {
                     console.error('User insert error:', userError);
-                    document.getElementById('regError').textContent = 'Ошибка создания профиля: ' + userError.message;
+                    document.getElementById('regError').textContent = 'Ошибка создания профиля';
                     return;
                 }
 
                 document.getElementById('regSuccess').textContent = 'Регистрация успешна! Теперь войдите.';
 
-                // Очищаем форму
                 document.getElementById('regEmail').value = '';
                 document.getElementById('regNickname').value = '';
                 document.getElementById('regPassword').value = '';
 
-                // Переключаемся на форму входа через 2 секунды
                 setTimeout(() => {
                     showLogin();
                 }, 2000);
@@ -594,9 +604,9 @@
                 console.error('Registration error:', error);
                 document.getElementById('regError').textContent = 'Ошибка: ' + error.message;
             }
-        };
+        }
 
-        window.login = async function() {
+        async function login() {
             const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
 
@@ -620,7 +630,6 @@
 
                 currentUser = data.user;
 
-                // Получаем профиль пользователя
                 const { data: userData, error: userError } = await supabase
                     .from('users')
                     .select('*')
@@ -635,13 +644,11 @@
 
                 currentUser.profile = userData;
 
-                // Показываем основной интерфейс
-                document.getElementById('authContainer').style.display = 'none';
-                document.getElementById('appContainer').style.display = 'flex';
-                document.getElementById('userNickname').textContent = userData.nickname;
-                document.getElementById('userAvatar').src = userData.avatar_url || `https://ui-avatars.com/api/?background=667eea&color=fff&name=${encodeURIComponent(userData.nickname)}`;
+                authContainer.style.display = 'none';
+                appContainer.style.display = 'flex';
+                userNicknameSpan.textContent = userData.nickname;
+                userAvatarImg.src = userData.avatar_url || `https://ui-avatars.com/api/?background=667eea&color=fff&name=${encodeURIComponent(userData.nickname)}`;
 
-                // Загружаем данные
                 loadChats();
                 loadFriends();
 
@@ -649,19 +656,21 @@
                 console.error('Login error:', error);
                 document.getElementById('loginError').textContent = 'Ошибка входа';
             }
-        };
+        }
 
-        window.logout = function() {
+        function logout() {
             supabase.auth.signOut();
             currentUser = null;
             currentChat = null;
-            document.getElementById('authContainer').style.display = 'flex';
-            document.getElementById('appContainer').style.display = 'none';
+            if (messagesSubscription) {
+                messagesSubscription.unsubscribe();
+            }
+            authContainer.style.display = 'flex';
+            appContainer.style.display = 'none';
             document.getElementById('loginEmail').value = '';
             document.getElementById('loginPassword').value = '';
-        };
+        }
 
-        // Загрузка чатов
         async function loadChats() {
             if (!currentUser) return;
 
@@ -670,17 +679,12 @@
                 .select('chat_id')
                 .eq('user_id', currentUser.id);
 
-            if (error || !memberships) {
-                console.error('Error loading memberships:', error);
+            if (error || !memberships || memberships.length === 0) {
+                chatsListDiv.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">Нет чатов</div>';
                 return;
             }
 
             const chatIds = memberships.map(m => m.chat_id);
-
-            if (chatIds.length === 0) {
-                document.getElementById('chatsList').innerHTML = '<div style="padding:20px;text-align:center;color:#999;">Нет чатов</div>';
-                return;
-            }
 
             const { data: chats, error: chatsError } = await supabase
                 .from('chats')
@@ -692,15 +696,13 @@
                 return;
             }
 
-            const chatsList = document.getElementById('chatsList');
-            chatsList.innerHTML = '';
+            chatsListDiv.innerHTML = '';
 
             for (const chat of chats) {
                 let displayName = chat.name;
                 let displayAvatar = chat.avatar_url;
 
                 if (chat.type === 'private') {
-                    // Получаем другого участника
                     const { data: members } = await supabase
                         .from('chat_members')
                         .select('user_id')
@@ -733,22 +735,16 @@
                     </div>
                 `;
                 chatElement.onclick = () => selectChat(chat.id, displayName, chat.type);
-                chatsList.appendChild(chatElement);
+                chatsListDiv.appendChild(chatElement);
             }
 
-            // Кнопка создания чата/группы
             const addButton = document.createElement('div');
             addButton.className = 'chat-item';
-            addButton.innerHTML = `
-                <div class="chat-details">
-                    <div class="chat-name">➕ Создать группу</div>
-                </div>
-            `;
+            addButton.innerHTML = `<div class="chat-details"><div class="chat-name">➕ Создать группу</div></div>`;
             addButton.onclick = () => showCreateGroupModal();
-            chatsList.appendChild(addButton);
+            chatsListDiv.appendChild(addButton);
         }
 
-        // Загрузка друзей
         async function loadFriends() {
             if (!currentUser) return;
 
@@ -767,11 +763,10 @@
                 return;
             }
 
-            const friendsList = document.getElementById('friendsList');
-            friendsList.innerHTML = '';
+            friendsListDiv.innerHTML = '';
 
             if (!friends || friends.length === 0) {
-                friendsList.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">Нет друзей</div>';
+                friendsListDiv.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">Нет друзей</div>';
             } else {
                 for (const friend of friends) {
                     const friendData = friend.friend_id === currentUser.id ? friend.user : friend.friend;
@@ -786,25 +781,18 @@
                         </div>
                     `;
                     friendElement.onclick = () => createPrivateChat(friendData.id, friendData.nickname);
-                    friendsList.appendChild(friendElement);
+                    friendsListDiv.appendChild(friendElement);
                 }
             }
 
-            // Кнопка добавления друга
             const addButton = document.createElement('div');
             addButton.className = 'chat-item';
-            addButton.innerHTML = `
-                <div class="chat-details">
-                    <div class="chat-name">➕ Добавить друга</div>
-                </div>
-            `;
+            addButton.innerHTML = `<div class="chat-details"><div class="chat-name">➕ Добавить друга</div></div>`;
             addButton.onclick = () => showAddFriendModal();
-            friendsList.appendChild(addButton);
+            friendsListDiv.appendChild(addButton);
         }
 
-        // Создание личного чата
         async function createPrivateChat(userId, nickname) {
-            // Проверяем, существует ли уже чат
             const { data: existingChats, error } = await supabase
                 .from('chat_members')
                 .select('chat_id')
@@ -824,7 +812,6 @@
                 }
             }
 
-            // Создаем новый чат
             const { data: chat, error: chatError } = await supabase
                 .from('chats')
                 .insert([{
@@ -839,7 +826,6 @@
                 return;
             }
 
-            // Добавляем участников
             await supabase
                 .from('chat_members')
                 .insert([
@@ -851,18 +837,12 @@
             loadChats();
         }
 
-        // Выбор чата
         async function selectChat(chatId, name, type) {
             currentChat = { id: chatId, name: name, type: type };
-            document.getElementById('currentChatName').textContent = name;
+            currentChatNameSpan.textContent = name;
 
-            if (type === 'group') {
-                document.getElementById('groupControls').style.display = 'block';
-            } else {
-                document.getElementById('groupControls').style.display = 'none';
-            }
+            groupControls.style.display = type === 'group' ? 'block' : 'none';
 
-            // Подписываемся на новые сообщения
             if (messagesSubscription) {
                 messagesSubscription.unsubscribe();
             }
@@ -882,7 +862,6 @@
             loadMessages(chatId);
         }
 
-        // Загрузка сообщений
         async function loadMessages(chatId) {
             const { data: messages, error } = await supabase
                 .from('messages')
@@ -896,17 +875,18 @@
                 return;
             }
 
-            const container = document.getElementById('messagesContainer');
-            container.innerHTML = '';
+            messagesContainer.innerHTML = '';
+
+            if (messages.length === 0) {
+                messagesContainer.innerHTML = '<div style="text-align:center;color:#999;margin-top:20px;">Нет сообщений</div>';
+            }
 
             for (const msg of messages) {
                 addMessageToUI(msg);
             }
         }
 
-        // Добавление сообщения в UI
         function addMessageToUI(message) {
-            const container = document.getElementById('messagesContainer');
             const isOwn = message.user_id === currentUser.id;
 
             const messageDiv = document.createElement('div');
@@ -914,9 +894,9 @@
 
             let content = `<div class="message-content">${escapeHtml(message.content || '')}</div>`;
 
-            if (message.file_url) {
+            if (message.file_url && message.file_url.startsWith('blob:')) {
                 if (message.message_type === 'photo') {
-                    content += `<img class="message-media" src="${message.file_url}" onclick="window.open('${message.file_url}')">`;
+                    content += `<img class="message-media" src="${message.file_url}">`;
                 } else if (message.message_type === 'video') {
                     content += `<video class="message-media" controls src="${message.file_url}"></video>`;
                 }
@@ -925,14 +905,12 @@
             content += `<div class="message-time">${new Date(message.created_at).toLocaleTimeString()}</div>`;
             messageDiv.innerHTML = content;
 
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // Отправка сообщения
-        window.sendMessage = async function() {
-            const input = document.getElementById('messageInput');
-            const content = input.value.trim();
+        async function sendMessage() {
+            const content = messageInput.value.trim();
 
             if (!content || !currentChat) return;
 
@@ -948,17 +926,16 @@
             if (error) {
                 alert('Ошибка отправки: ' + error.message);
             } else {
-                input.value = '';
+                messageInput.value = '';
             }
-        };
+        }
 
-        // Отправка файла
-        window.sendFile = async function(input) {
-            if (!currentChat || !input.files[0]) return;
+        function sendFile() {
+            if (!currentChat || !fileInput.files[0]) return;
 
-            const file = input.files[0];
+            const file = fileInput.files[0];
 
-            const { error } = await supabase
+            supabase
                 .from('messages')
                 .insert([{
                     chat_id: currentChat.id,
@@ -967,17 +944,15 @@
                     message_type: file.type.startsWith('image/') ? 'photo' : 'video',
                     file_url: URL.createObjectURL(file),
                     file_size: file.size
-                }]);
+                }])
+                .then(({ error }) => {
+                    if (error) alert('Ошибка отправки файла');
+                });
 
-            if (error) {
-                alert('Ошибка отправки файла');
-            }
+            fileInput.value = '';
+        }
 
-            input.value = '';
-        };
-
-        // Удаление чата
-        window.deleteCurrentChat = async function() {
+        async function deleteCurrentChat() {
             if (!currentChat) return;
 
             if (confirm('Удалить этот чат?')) {
@@ -989,21 +964,20 @@
                     }]);
 
                 currentChat = null;
-                document.getElementById('messagesContainer').innerHTML = '';
-                document.getElementById('currentChatName').textContent = 'Выберите чат';
+                messagesContainer.innerHTML = '<div style="text-align:center;color:#999;margin-top:20px;">Выберите чат чтобы начать общение</div>';
+                currentChatNameSpan.textContent = 'Выберите чат';
                 loadChats();
             }
-        };
+        }
 
-        // Создание/редактирование группы
-        window.showCreateGroupModal = function() {
+        function showCreateGroupModal() {
             document.getElementById('groupModalTitle').textContent = 'Создать группу';
             document.getElementById('groupName').value = '';
             document.getElementById('groupMembers').value = '';
             document.getElementById('groupModal').style.display = 'flex';
-        };
+        }
 
-        window.createOrUpdateGroup = async function() {
+        async function createOrUpdateGroup() {
             const name = document.getElementById('groupName').value;
             const membersStr = document.getElementById('groupMembers').value;
 
@@ -1015,7 +989,6 @@
             const memberNicknames = membersStr.split(',').map(n => n.trim()).filter(n => n);
             memberNicknames.push(currentUser.profile.nickname);
 
-            // Получаем ID участников
             const { data: users, error } = await supabase
                 .from('users')
                 .select('id, nickname')
@@ -1026,7 +999,6 @@
                 return;
             }
 
-            // Создаем группу
             const { data: chat, error: chatError } = await supabase
                 .from('chats')
                 .insert([{
@@ -1043,7 +1015,6 @@
                 return;
             }
 
-            // Добавляем участников
             const members = users.map(u => ({
                 chat_id: chat.id,
                 user_id: u.id,
@@ -1055,9 +1026,9 @@
             closeGroupModal();
             loadChats();
             alert('Группа создана!');
-        };
+        }
 
-        window.editGroup = async function() {
+        async function editGroup() {
             if (!currentChat || currentChat.type !== 'group') return;
 
             const { data: chat } = await supabase
@@ -1071,7 +1042,8 @@
             document.getElementById('groupMembers').value = '';
             document.getElementById('groupModal').style.display = 'flex';
 
-            window.updateGroup = async () => {
+            const updateBtn = document.getElementById('createGroupBtn');
+            updateBtn.onclick = async () => {
                 const newName = document.getElementById('groupName').value;
                 const newMembers = document.getElementById('groupMembers').value;
 
@@ -1098,9 +1070,9 @@
                 loadChats();
                 alert('Группа обновлена');
             };
-        };
+        }
 
-        window.addMemberToGroup = async function() {
+        async function addMemberToGroup() {
             const nickname = prompt('Введите никнейм пользователя:');
             if (!nickname || !currentChat) return;
 
@@ -1118,10 +1090,9 @@
             } else {
                 alert('Пользователь не найден');
             }
-        };
+        }
 
-        // Система друзей
-        window.addFriend = async function() {
+        async function addFriend() {
             const nickname = document.getElementById('friendNickname').value.trim();
             if (!nickname) return;
 
@@ -1160,14 +1131,14 @@
                 closeFriendModal();
                 loadFriends();
             }
-        };
+        }
 
-        // Смена аватара
-        window.changeAvatar = function() {
+        function changeAvatar() {
             document.getElementById('avatarModal').style.display = 'flex';
-        };
+        }
 
-        window.uploadAvatar = async function(input) {
+        function uploadAvatar() {
+            const input = document.getElementById('avatarInput');
             if (!input.files[0]) return;
 
             const file = input.files[0];
@@ -1181,45 +1152,45 @@
                     .update({ avatar_url: avatarUrl })
                     .eq('id', currentUser.id);
 
-                document.getElementById('userAvatar').src = avatarUrl;
+                userAvatarImg.src = avatarUrl;
                 currentUser.profile.avatar_url = avatarUrl;
                 closeAvatarModal();
                 loadChats();
             };
 
             reader.readAsDataURL(file);
-        };
+        }
 
-        // Вспомогательные функции
-        window.switchTab = function(tab) {
+        function switchTab(tab) {
             currentTab = tab;
-            document.getElementById('chatsList').style.display = tab === 'chats' ? 'block' : 'none';
-            document.getElementById('friendsList').style.display = tab === 'friends' ? 'block' : 'none';
-
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(t => t.classList.remove('active'));
             if (tab === 'chats') {
-                tabs[0].classList.add('active');
+                chatsListDiv.style.display = 'block';
+                friendsListDiv.style.display = 'none';
+                chatsTab.classList.add('active');
+                friendsTab.classList.remove('active');
             } else {
-                tabs[1].classList.add('active');
+                chatsListDiv.style.display = 'none';
+                friendsListDiv.style.display = 'block';
+                chatsTab.classList.remove('active');
+                friendsTab.classList.add('active');
             }
-        };
+        }
 
-        window.searchChats = function() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const items = document.querySelectorAll('#chatsList .chat-item');
+        function searchChats() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const items = chatsListDiv.querySelectorAll('.chat-item');
             items.forEach(item => {
                 const name = item.querySelector('.chat-name')?.textContent.toLowerCase() || '';
                 item.style.display = name.includes(searchTerm) ? 'flex' : 'none';
             });
-        };
+        }
 
-        window.handleKeyPress = function(event) {
+        function handleKeyPress(event) {
             if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
                 sendMessage();
             }
-        };
+        }
 
         function escapeHtml(text) {
             if (!text) return '';
@@ -1228,15 +1199,42 @@
             return div.innerHTML;
         }
 
-        window.closeAvatarModal = function() { document.getElementById('avatarModal').style.display = 'none'; };
-        window.closeGroupModal = function() { document.getElementById('groupModal').style.display = 'none'; };
-        window.closeFriendModal = function() { document.getElementById('addFriendModal').style.display = 'none'; };
-        window.showAddFriendModal = function() { document.getElementById('addFriendModal').style.display = 'flex'; };
+        function closeAvatarModal() { document.getElementById('avatarModal').style.display = 'none'; }
+        function closeGroupModal() {
+            document.getElementById('groupModal').style.display = 'none';
+            document.getElementById('createGroupBtn').onclick = createOrUpdateGroup;
+        }
+        function closeFriendModal() { document.getElementById('addFriendModal').style.display = 'none'; }
+        function showAddFriendModal() { document.getElementById('addFriendModal').style.display = 'flex'; }
 
-        // Инициализация
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_OUT') {
-                logout();
+        // Назначение обработчиков событий
+        loginBtn.onclick = login;
+        registerBtn.onclick = register;
+        showRegisterBtn.onclick = showRegister;
+        showLoginBtn.onclick = showLogin;
+        logoutBtn.onclick = logout;
+        chatsTab.onclick = () => switchTab('chats');
+        friendsTab.onclick = () => switchTab('friends');
+        sendBtn.onclick = sendMessage;
+        fileBtn.onclick = () => fileInput.click();
+        fileInput.onchange = sendFile;
+        deleteChatBtn.onclick = deleteCurrentChat;
+        addMemberBtn.onclick = addMemberToGroup;
+        editGroupBtn.onclick = editGroup;
+        searchInput.oninput = searchChats;
+        messageInput.onkeypress = handleKeyPress;
+        userAvatarImg.onclick = changeAvatar;
+        document.getElementById('uploadAvatarBtn').onclick = uploadAvatar;
+        document.getElementById('closeAvatarBtn').onclick = closeAvatarModal;
+        document.getElementById('createGroupBtn').onclick = createOrUpdateGroup;
+        document.getElementById('closeGroupBtn').onclick = closeGroupModal;
+        document.getElementById('addFriendBtn').onclick = addFriend;
+        document.getElementById('closeFriendBtn').onclick = closeFriendModal;
+
+        // Проверка сессии при загрузке
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                login();
             }
         });
     </script>
