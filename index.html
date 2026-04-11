@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Clone</title>
+    <title>Telegram Clone - Регистрация Email + Пароль</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
@@ -19,7 +19,6 @@
             overflow: hidden;
         }
 
-        /* Страница входа */
         .auth-container {
             display: flex;
             justify-content: center;
@@ -32,7 +31,7 @@
             background: white;
             padding: 40px;
             border-radius: 20px;
-            width: 350px;
+            width: 380px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
 
@@ -80,7 +79,13 @@
             text-align: center;
         }
 
-        /* Основное приложение */
+        .success {
+            color: green;
+            font-size: 12px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
         .app {
             display: flex;
             height: 100vh;
@@ -138,6 +143,21 @@
         .user-email {
             color: #888;
             font-size: 12px;
+        }
+
+        .logout-btn {
+            margin-top: 10px;
+            padding: 8px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .logout-btn:hover {
+            background: #b91c1c;
         }
 
         .chats-list {
@@ -289,121 +309,137 @@
         const SB_URL = 'https://xxqvsnxcudrwoyofjnie.supabase.co';
         const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4cXZzbnhjdWRyd295b2ZqbmllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NDk3MzMsImV4cCI6MjA5MTIyNTczM30.p6ryAFSevRpZKBQ7m0PSw7POPnIaD3TbtPMEcKfIeRI';
 
-        const sbClient = window.supabase.createClient(SB_URL, SB_KEY);
+        const supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
-        let USER = null;
+        let CURRENT_USER = null;
         let CURRENT_CHAT = 'general';
         let MESSAGES = [];
 
-        // Функция отображения страницы входа/регистрации
+        // Страница входа/регистрации
         function renderAuth() {
-            const container = document.getElementById('root');
-            container.innerHTML = `
+            const root = document.getElementById('root');
+            root.innerHTML = `
                 <div class="auth-container">
                     <div class="auth-box">
                         <h2 id="formTitle">📱 Вход</h2>
-                        <div id="errorMsg" class="error"></div>
+                        <div id="messageDiv"></div>
                         <input type="email" id="emailInput" placeholder="Email" autocomplete="off">
-                        <input type="text" id="nicknameInput" placeholder="Никнейм">
+                        <input type="password" id="passwordInput" placeholder="Пароль">
+                        <input type="text" id="nicknameInput" placeholder="Никнейм" style="display:none;">
                         <button id="actionButton">Войти</button>
                         <button id="switchButton" class="switch-btn">Нет аккаунта? Регистрация</button>
                     </div>
                 </div>
             `;
 
-            let isLoginMode = true;
+            let isLogin = true;
             const titleEl = document.getElementById('formTitle');
             const actionBtn = document.getElementById('actionButton');
             const switchBtn = document.getElementById('switchButton');
             const emailInp = document.getElementById('emailInput');
+            const passwordInp = document.getElementById('passwordInput');
             const nicknameInp = document.getElementById('nicknameInput');
-            const errorEl = document.getElementById('errorMsg');
-
-            nicknameInp.placeholder = 'Никнейм (только при регистрации)';
+            const messageDiv = document.getElementById('messageDiv');
 
             actionBtn.onclick = async () => {
                 const email = emailInp.value.trim();
-                const nickname = nicknameInp.value.trim();
+                const password = passwordInp.value;
 
-                if (!email) {
-                    errorEl.innerText = 'Введите email';
+                if (!email || !password) {
+                    messageDiv.innerHTML = '<div class="error">Заполните все поля</div>';
                     return;
                 }
 
-                if (isLoginMode) {
-                    // Вход
-                    const { data, error } = await sbClient
-                        .from('users')
-                        .select('*')
-                        .eq('email', email)
-                        .single();
+                if (isLogin) {
+                    // ВХОД
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                        email: email,
+                        password: password
+                    });
 
-                    if (error || !data) {
-                        errorEl.innerText = 'Пользователь не найден';
+                    if (error) {
+                        messageDiv.innerHTML = `<div class="error">${error.message}</div>`;
                     } else {
-                        USER = data;
-                        localStorage.setItem('tg_user', JSON.stringify(USER));
+                        // Получаем профиль пользователя
+                        const { data: profile } = await supabase
+                            .from('users')
+                            .select('*')
+                            .eq('id', data.user.id)
+                            .single();
+
+                        CURRENT_USER = {
+                            id: data.user.id,
+                            email: data.user.email,
+                            nickname: profile?.nickname || data.user.email.split('@')[0]
+                        };
+
+                        localStorage.setItem('tg_user', JSON.stringify(CURRENT_USER));
                         renderMainApp();
                     }
                 } else {
-                    // Регистрация
+                    // РЕГИСТРАЦИЯ
+                    const nickname = nicknameInp.value.trim();
                     if (!nickname) {
-                        errorEl.innerText = 'Введите никнейм';
+                        messageDiv.innerHTML = '<div class="error">Введите никнейм</div>';
                         return;
                     }
 
-                    const { data: existing } = await sbClient
-                        .from('users')
-                        .select('email')
-                        .eq('email', email)
-                        .single();
-
-                    if (existing) {
-                        errorEl.innerText = 'Email уже зарегистрирован';
-                        return;
-                    }
-
-                    const { data, error } = await sbClient
-                        .from('users')
-                        .insert({
-                            email: email,
-                            nickname: nickname,
-                            created_at: new Date()
-                        })
-                        .select()
-                        .single();
+                    const { data, error } = await supabase.auth.signUp({
+                        email: email,
+                        password: password,
+                        options: {
+                            data: {
+                                nickname: nickname
+                            }
+                        }
+                    });
 
                     if (error) {
-                        errorEl.innerText = 'Ошибка: ' + error.message;
+                        messageDiv.innerHTML = `<div class="error">${error.message}</div>`;
                     } else {
-                        USER = data;
-                        localStorage.setItem('tg_user', JSON.stringify(USER));
-                        renderMainApp();
+                        // Создаем профиль в таблице users
+                        await supabase.from('users').insert({
+                            id: data.user.id,
+                            email: email,
+                            nickname: nickname,
+                            fullname: nickname,
+                            created_at: new Date()
+                        });
+
+                        messageDiv.innerHTML = '<div class="success">Регистрация успешна! Теперь войдите.</div>';
+                        // Переключаемся на форму входа
+                        isLogin = true;
+                        titleEl.innerText = '📱 Вход';
+                        actionBtn.innerText = 'Войти';
+                        switchBtn.innerText = 'Нет аккаунта? Регистрация';
+                        nicknameInp.style.display = 'none';
+                        emailInp.value = '';
+                        passwordInp.value = '';
+                        nicknameInp.value = '';
                     }
                 }
             };
 
             switchBtn.onclick = () => {
-                isLoginMode = !isLoginMode;
-                if (isLoginMode) {
+                isLogin = !isLogin;
+                if (isLogin) {
                     titleEl.innerText = '📱 Вход';
                     actionBtn.innerText = 'Войти';
                     switchBtn.innerText = 'Нет аккаунта? Регистрация';
-                    nicknameInp.placeholder = 'Никнейм (только при регистрации)';
-                    nicknameInp.value = '';
+                    nicknameInp.style.display = 'none';
                 } else {
                     titleEl.innerText = '📝 Регистрация';
                     actionBtn.innerText = 'Зарегистрироваться';
                     switchBtn.innerText = 'Уже есть аккаунт? Вход';
-                    nicknameInp.placeholder = 'Никнейм';
+                    nicknameInp.style.display = 'block';
                 }
-                errorEl.innerText = '';
+                messageDiv.innerHTML = '';
             };
         }
 
         // Загрузка сообщений
         async function loadMessages() {
-            const { data, error } = await sbClient
+            const { data, error } = await supabase
                 .from('messages')
                 .select('*')
                 .eq('chat_id', CURRENT_CHAT)
@@ -411,8 +447,6 @@
 
             if (!error && data) {
                 MESSAGES = data;
-            } else {
-                MESSAGES = [];
             }
         }
 
@@ -423,11 +457,9 @@
 
             if (!content) return;
 
-            await sbClient.from('messages').insert({
-                content: content,
-                nickname: USER.nickname,
-                user_id: USER.id,
-                email: USER.email,
+            await supabase.from('messages').insert({
+                text: content,
+                user_id: CURRENT_USER.id,
                 chat_id: CURRENT_CHAT,
                 created_at: new Date()
             });
@@ -442,21 +474,18 @@
             const container = document.getElementById('messagesContainer');
             if (!container) return;
 
-            const chatMessages = MESSAGES.filter(m => m.chat_id === CURRENT_CHAT);
-
-            if (chatMessages.length === 0) {
+            if (MESSAGES.length === 0) {
                 container.innerHTML = '<div style="text-align: center; color: #888; padding: 40px;">💬 Нет сообщений</div>';
                 return;
             }
 
-            container.innerHTML = chatMessages.map(msg => {
-                const isSent = msg.user_id === USER.id;
+            container.innerHTML = MESSAGES.map(msg => {
+                const isSent = msg.user_id === CURRENT_USER.id;
                 const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 return `
                     <div class="message ${isSent ? 'sent' : 'received'}">
                         <div class="message-bubble">
-                            ${!isSent ? `<div style="font-size: 11px; margin-bottom: 4px; opacity: 0.8;">${msg.nickname}</div>` : ''}
-                            <div class="message-text">${escapeHtml(msg.content)}</div>
+                            <div class="message-text">${escapeHtml(msg.text)}</div>
                             <div class="message-time">${time}</div>
                         </div>
                     </div>
@@ -466,36 +495,39 @@
             container.scrollTop = container.scrollHeight;
         }
 
+        // Выход
+        async function logout() {
+            await supabase.auth.signOut();
+            localStorage.removeItem('tg_user');
+            CURRENT_USER = null;
+            renderAuth();
+        }
+
         // Основной интерфейс
         function renderMainApp() {
-            const groups = [
-                { id: 'general', name: 'Общий чат', avatar: '💬' }
-            ];
-
             const root = document.getElementById('root');
             root.innerHTML = `
                 <div class="app">
                     <div class="sidebar">
                         <div class="sidebar-header">
                             <h1>Telegram</h1>
-                            <div class="user-info" onclick="alert('Email: ${USER.email}\\nНик: ${USER.nickname}')">
-                                <div class="avatar">${USER.nickname ? USER.nickname[0].toUpperCase() : 'U'}</div>
+                            <div class="user-info" onclick="alert('Email: ${CURRENT_USER.email}\\nНик: ${CURRENT_USER.nickname}')">
+                                <div class="avatar">${CURRENT_USER.nickname ? CURRENT_USER.nickname[0].toUpperCase() : 'U'}</div>
                                 <div>
-                                    <div class="user-name">${USER.nickname}</div>
-                                    <div class="user-email">${USER.email}</div>
+                                    <div class="user-name">${CURRENT_USER.nickname}</div>
+                                    <div class="user-email">${CURRENT_USER.email}</div>
                                 </div>
                             </div>
+                            <button class="logout-btn" onclick="logout()">🚪 Выйти</button>
                         </div>
                         <div class="chats-list">
-                            ${groups.map(group => `
-                                <div class="chat-item ${CURRENT_CHAT === group.id ? 'active' : ''}" onclick="switchChat('${group.id}')">
-                                    <div class="chat-avatar">${group.avatar}</div>
-                                    <div>
-                                        <div class="chat-name">${group.name}</div>
-                                        <div class="chat-preview">${getLastMessagePreview(group.id)}</div>
-                                    </div>
+                            <div class="chat-item active">
+                                <div class="chat-avatar">💬</div>
+                                <div>
+                                    <div class="chat-name">Общий чат</div>
+                                    <div class="chat-preview">${getLastMessagePreview()}</div>
                                 </div>
-                            `).join('')}
+                            </div>
                         </div>
                     </div>
                     <div class="chat-area">
@@ -519,25 +551,11 @@
             setupRealtime();
         }
 
-        function getLastMessagePreview(chatId) {
-            const lastMsg = MESSAGES.filter(m => m.chat_id === chatId).pop();
-            if (lastMsg) {
-                return lastMsg.content.length > 30 ? lastMsg.content.substring(0, 30) + '...' : lastMsg.content;
-            }
-            return 'Нет сообщений';
+        function getLastMessagePreview() {
+            if (MESSAGES.length === 0) return 'Нет сообщений';
+            const lastMsg = MESSAGES[MESSAGES.length - 1];
+            return lastMsg.text.length > 30 ? lastMsg.text.substring(0, 30) + '...' : lastMsg.text;
         }
-
-        window.switchChat = async function(chatId) {
-            CURRENT_CHAT = chatId;
-            await loadMessages();
-            renderMessages();
-
-            // Обновляем активный класс в списке чатов
-            document.querySelectorAll('.chat-item').forEach(el => {
-                el.classList.remove('active');
-            });
-            event.currentTarget.classList.add('active');
-        };
 
         function escapeHtml(text) {
             if (!text) return '';
@@ -547,7 +565,7 @@
         }
 
         function setupRealtime() {
-            sbClient
+            supabase
                 .channel('public:messages')
                 .on('postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'messages' },
@@ -559,10 +577,10 @@
                 .subscribe();
         }
 
-        // Запуск приложения
+        // Запуск
         const savedUser = localStorage.getItem('tg_user');
         if (savedUser) {
-            USER = JSON.parse(savedUser);
+            CURRENT_USER = JSON.parse(savedUser);
             renderMainApp();
         } else {
             renderAuth();
